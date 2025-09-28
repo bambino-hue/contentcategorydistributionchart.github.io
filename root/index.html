@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Layer Radial Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1a202c;
+            margin-bottom: 8px;
+            font-size: 32px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 60px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #chart {
+            flex: 0 0 auto;
+        }
+        
+        .task-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 300px;
+        }
+        
+        .task-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .task-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #cbd5e1;
+        }
+        
+        .task-card.active {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .task-indicator {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 60%;
+            border-radius: 0 2px 2px 0;
+            transition: width 0.3s ease;
+        }
+        
+        .task-card:hover .task-indicator {
+            width: 6px;
+        }
+        
+        .task-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .task-count {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .task-categories {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .category-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .arc-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        
+        .value-label {
+            font-size: 12px;
+            fill: rgba(255, 255, 255, 0.95);
+            text-anchor: middle;
+            pointer-events: none;
+            font-weight: 500;
+        }
+        
+        .tooltip {
+            position: absolute;
+            padding: 12px 16px;
+            font-size: 14px;
+            background: white;
+            color: #1e293b;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid #e2e8f0;
+            z-index: 1000;
+        }
+        
+        .tooltip strong {
+            color: #0f172a;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 40px;
+            gap: 32px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            color: #475569;
+        }
+        
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 6px;
+        }
+        
+        button:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .center-text {
+            font-size: 48px;
+            font-weight: 700;
+            fill: #1e293b;
+        }
+        
+        .center-subtext {
+            font-size: 16px;
+            fill: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Two-Layer Radial Dataset Analysis</h1>
+        <div class="subtitle">Inner Ring: Categories | Outer Ring: Tasks</div>
+        
+
+        
+        <div class="main-content">
+            <div id="chart"></div>
+            
+            <div class="task-cards" id="taskCards">
+                <!-- Task cards will be generated by JavaScript -->
+            </div>
+        </div>
+        
+        <div class="tooltip"></div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dc2626;"></div>
+                <span>Speech</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #2563eb;"></div>
+                <span>Environmental/Natural</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #16a34a;"></div>
+                <span>Specialized Audio</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f59e0b;"></div>
+                <span>Music</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Data with more distinct colors
+        const categoryData = {
+            'Speech': { total: 27, color: '#dc2626' },  // Red
+            'Environmental/Natural': { total: 28, color: '#2563eb' },  // Blue
+            'Specialized Audio': { total: 1, color: '#16a34a' },  // Green
+            'Music': { total: 8, color: '#f59e0b' }  // Amber
+        };
+        
+        const taskData = {
+            'Audio classification': { 
+                total: 40, 
+                categories: {'Speech': 20, 'Environmental/Natural': 19, 'Music': 1},
+                color: '#8b5cf6'
+            },
+            'Automatic speech recognition': { 
+                total: 11, 
+                categories: {'Speech': 7, 'Environmental/Natural': 3, 'Specialized Audio': 1},
+                color: '#06b6d4'
+            },
+            'Music research task': { 
+                total: 7, 
+                categories: {'Music': 7},
+                color: '#ec4899'
+            },
+            'Audio captioning': { 
+                total: 5, 
+                categories: {'Environmental/Natural': 5},
+                color: '#10b981'
+            },
+            'Bioacoustics analysis': { 
+                total: 1, 
+                categories: {'Environmental/Natural': 1},
+                color: '#f97316'
+            }
+        };
+        
+        // Create task cards
+        const taskCardsContainer = document.getElementById('taskCards');
+        Object.entries(taskData).forEach(([task, data]) => {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            card.dataset.task = task;
+            
+            const indicator = document.createElement('div');
+            indicator.className = 'task-indicator';
+            indicator.style.backgroundColor = data.color;
+            
+            const taskName = document.createElement('div');
+            taskName.className = 'task-name';
+            taskName.textContent = task;
+            
+            const taskCount = document.createElement('div');
+            taskCount.className = 'task-count';
+            taskCount.textContent = `${data.total} datasets`;
+            
+            const categoriesDiv = document.createElement('div');
+            categoriesDiv.className = 'task-categories';
+            
+            Object.entries(data.categories).forEach(([cat, count]) => {
+                const badge = document.createElement('span');
+                badge.className = 'category-badge';
+                badge.style.backgroundColor = categoryData[cat].color;
+                badge.textContent = `${cat.split('/')[0]} (${count})`;
+                categoriesDiv.appendChild(badge);
+            });
+            
+            card.appendChild(indicator);
+            card.appendChild(taskName);
+            card.appendChild(taskCount);
+            card.appendChild(categoriesDiv);
+            
+            card.addEventListener('click', () => highlightTask(task));
+            card.addEventListener('mouseenter', () => previewHighlight(task));
+            card.addEventListener('mouseleave', () => clearPreview());
+            
+            taskCardsContainer.appendChild(card);
+        });
+        
+        // Dimensions
+        const width = 600;
+        const height = 600;
+        const innerRadius = 80;
+        const outerRadius = 150;
+        const outerRingInner = 160;
+        const outerRingOuter = 250;
+        
+        // Create SVG
+        const svg = d3.select('#chart')
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height);
+        
+        const g = svg.append('g')
+            .attr('transform', `translate(${width/2},${height/2})`);
+        
+        const tooltip = d3.select('.tooltip');
+        
+        // Calculate angles for categories (starting from top)
+        const categories = Object.keys(categoryData);
+        const categoryTotal = d3.sum(categories.map(c => categoryData[c].total));
+        
+        let currentAngle = -Math.PI / 2; // Start from top
+        const categoryAngles = {};
+        
+        categories.forEach(cat => {
+            const angleSize = (categoryData[cat].total / categoryTotal) * 2 * Math.PI;
+            categoryAngles[cat] = {
+                startAngle: currentAngle,
+                endAngle: currentAngle + angleSize,
+                midAngle: currentAngle + angleSize / 2,
+                size: angleSize
+            };
+            currentAngle += angleSize;
+        });
+        
+        // Arc generators
+        const innerArc = d3.arc()
+            .innerRadius(innerRadius)
+            .outerRadius(outerRadius);
+        
+        const outerArc = d3.arc()
+            .innerRadius(outerRingInner)
+            .outerRadius(outerRingOuter);
+        
+        // Draw inner ring
+        const innerRing = g.append('g').attr('class', 'inner-ring');
+        
+        categories.forEach(cat => {
+            const group = innerRing.append('g');
+            
+            group.append('path')
+                .datum(categoryAngles[cat])
+                .attr('d', innerArc)
+                .attr('fill', categoryData[cat].color)
+                .attr('stroke', 'white')
+                .attr('stroke-width', 3)
+                .attr('class', `category-arc category-${cat.replace(/[\/\s]/g, '-')}`)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('opacity', 0.85);
+                    tooltip.style('opacity', .95);
+                    tooltip.html(`<strong>${cat}</strong><br/>Total: ${categoryData[cat].total} datasets`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function(d) {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.style('opacity', 0);
+                });
+            
+            // Add labels (skip Music and Specialized Audio)
+            const angle = categoryAngles[cat].midAngle;
+            const labelRadius = (innerRadius + outerRadius) / 2;
+            const x = Math.cos(angle) * labelRadius;
+            const y = Math.sin(angle) * labelRadius;
+            
+            if (cat === 'Environmental/Natural') {
+                group.append('text')
+                    .attr('class', 'arc-label')
+                    .attr('x', x)
+                    .attr('y', y - 6)
+                    .text('Environmental');
+                group.append('text')
+                    .attr('class', 'arc-label')
+                    .attr('x', x)
+                    .attr('y', y + 9)
+                    .style('font-size', '13px')
+                    .text('Natural');
+                
+                // Add count for Environmental/Natural
+                const countX = Math.cos(angle) * (outerRadius - 20);
+                const countY = Math.sin(angle) * (outerRadius - 20);
+                group.append('text')
+                    .attr('class', 'value-label')
+                    .attr('x', countX)
+                    .attr('y', countY + 4)
+                    .text(categoryData[cat].total);
+            } else if (cat === 'Speech') {
+                group.append('text')
+                    .attr('class', 'arc-label')
+                    .attr('x', x)
+                    .attr('y', y + 4)
+                    .text(cat);
+                
+                // Add count for Speech
+                const countX = Math.cos(angle) * (outerRadius - 20);
+                const countY = Math.sin(angle) * (outerRadius - 20);
+                group.append('text')
+                    .attr('class', 'value-label')
+                    .attr('x', countX)
+                    .attr('y', countY + 4)
+                    .text(categoryData[cat].total);
+            }
+            // Skip labels for Music and Specialized Audio
+        });
+        
+        // Calculate outer ring segments
+        const segments = [];
+        const tasks = Object.keys(taskData);
+        
+        Object.keys(categoryAngles).forEach(cat => {
+            let segmentStart = categoryAngles[cat].startAngle;
+            
+            tasks.forEach(task => {
+                if (taskData[task].categories[cat]) {
+                    const count = taskData[task].categories[cat];
+                    const proportion = count / categoryData[cat].total;
+                    const segmentSize = categoryAngles[cat].size * proportion;
+                    
+                    segments.push({
+                        task: task,
+                        category: cat,
+                        count: count,
+                        startAngle: segmentStart,
+                        endAngle: segmentStart + segmentSize,
+                        midAngle: segmentStart + segmentSize / 2
+                    });
+                    
+                    segmentStart += segmentSize;
+                }
+            });
+        });
+        
+        // Draw outer ring
+        const outerRing = g.append('g').attr('class', 'outer-ring');
+        
+        segments.forEach(seg => {
+            const taskIndex = tasks.indexOf(seg.task);
+            
+            outerRing.append('path')
+                .datum(seg)
+                .attr('d', d => outerArc({startAngle: d.startAngle, endAngle: d.endAngle}))
+                .attr('fill', d3.color(categoryData[seg.category].color).darker(taskIndex * 0.2))
+                .attr('stroke', 'white')
+                .attr('stroke-width', 2)
+                .attr('class', `task-arc task-${seg.task.replace(/\s/g, '-')} category-${seg.category.replace(/[\/\s]/g, '-')}`)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('opacity', 0.85);
+                    tooltip.style('opacity', .95);
+                    tooltip.html(`<strong>${d.task}</strong><br/>Category: ${d.category}<br/>Count: ${d.count} datasets`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function(d) {
+                    d3.select(this).attr('opacity', 1);
+                    tooltip.style('opacity', 0);
+                })
+                .on('click', function(d) {
+                    highlightTask(d.task);
+                });
+        });
+        
+        // Center text
+        const centerGroup = g.append('g');
+        
+        centerGroup.append('text')
+            .attr('class', 'center-text')
+            .attr('text-anchor', 'middle')
+            .attr('y', 5)
+            .text('64');
+        
+        centerGroup.append('text')
+            .attr('class', 'center-subtext')
+            .attr('text-anchor', 'middle')
+            .attr('y', 28)
+            .text('Total Datasets');
+        
+        // Interaction functions
+        function highlightTask(taskName) {
+            // Reset all
+            d3.selectAll('.task-arc').attr('opacity', 0.3);
+            d3.selectAll('.category-arc').attr('opacity', 0.5);
+            d3.selectAll('.task-card').classList.remove('active');
+            
+            // Highlight selected
+            d3.selectAll(`.task-${taskName.replace(/\s/g, '-')}`).attr('opacity', 1);
+            
+            // Highlight related categories
+            Object.keys(taskData[taskName].categories).forEach(cat => {
+                d3.selectAll(`.category-${cat.replace(/[\/\s]/g, '-')}`).attr('opacity', 1);
+            });
+            
+            // Highlight card
+            document.querySelector(`[data-task="${taskName}"]`)?.classList.add('active');
+        }
+        
+        function previewHighlight(taskName) {
+            d3.selectAll('.task-arc').attr('opacity', 0.5);
+            d3.selectAll(`.task-${taskName.replace(/\s/g, '-')}`).attr('opacity', 1);
+        }
+        
+        function clearPreview() {
+            d3.selectAll('.task-arc').attr('opacity', 1);
+            d3.selectAll('.category-arc').attr('opacity', 1);
+        }
+        
+        function resetHighlight() {
+            d3.selectAll('.task-arc').attr('opacity', 1);
+            d3.selectAll('.category-arc').attr('opacity', 1);
+            d3.selectAll('.task-card').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
